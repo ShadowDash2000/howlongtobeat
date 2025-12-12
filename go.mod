@@ -1,3 +1,3 @@
-module github.com/forbiddencoding/howlongtobeat
+module github.com/ShadowDash2000/howlongtobeat
 
-go 1.21
+go 1.25.5
