@@ -27,11 +27,14 @@
 package howlongtobeat
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -53,6 +56,8 @@ type (
 		logger  *log.Logger
 		timeout time.Duration
 		apiData *ApiData
+
+		limiter *rate.Limiter
 	}
 
 	// Option is a type alias for functions to configure your Client.
@@ -77,6 +82,16 @@ func WithRequestTimeout(timeout int) Option {
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(client *Client) {
 		client.client = httpClient
+	}
+}
+
+func WithRateLimit(r time.Duration, b int) Option {
+	return func(client *Client) {
+		if r <= 0 || b <= 0 {
+			client.limiter = nil
+			return
+		}
+		client.limiter = rate.NewLimiter(rate.Every(r), b)
 	}
 }
 
@@ -107,8 +122,20 @@ func New(options ...Option) (*Client, error) {
 	return c, nil
 }
 
+func (c *Client) waitRateLimit(ctx context.Context) error {
+	if c.limiter == nil {
+		return nil
+	}
+
+	return c.limiter.Wait(ctx)
+}
+
 // do performs the given request and parses the response with the provided parser.
 func (c *Client) do(req *http.Request, parser parseResponseFunc) (err error) {
+	if err = c.waitRateLimit(req.Context()); err != nil {
+		return err
+	}
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
