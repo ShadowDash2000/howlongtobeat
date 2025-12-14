@@ -134,15 +134,7 @@ func (c *Client) getApiDataWithDefaultEndpoint(ctx context.Context) (*ApiData, e
 	return apiData, nil
 }
 
-// getApiData
-// Search flag indicates which getApi method we should use.
-// If true, the method uses getApi method with endpoint search, otherwise
-// it uses the default endpoint.
-func (c *Client) getApiData(ctx context.Context, search bool) (*ApiData, error) {
-	if c.apiData != nil {
-		return c.apiData, nil
-	}
-
+func (c *Client) fetchApiData(ctx context.Context, search bool) (*ApiData, error) {
 	var (
 		apiData *ApiData
 		err     error
@@ -157,7 +149,33 @@ func (c *Client) getApiData(ctx context.Context, search bool) (*ApiData, error) 
 		return nil, err
 	}
 
+	return apiData, nil
+}
+
+// getApiData
+// Search flag indicates which getApi method we should use.
+// If true, the method uses getApi method with endpoint search, otherwise
+// it uses the default endpoint.
+func (c *Client) getApiData(ctx context.Context, search bool) (*ApiData, error) {
+	if c.apiData != nil {
+		return c.apiData, nil
+	}
+
+	apiData, err := c.fetchApiData(ctx, search)
+	if err != nil {
+		return nil, err
+	}
+
 	c.apiData = apiData
 
 	return c.apiData, nil
+}
+
+func (c *Client) RefreshToken(ctx context.Context, search bool) error {
+	apiData, err := c.fetchApiData(ctx, search)
+	if err != nil {
+		return err
+	}
+	c.apiData = apiData
+	return nil
 }
