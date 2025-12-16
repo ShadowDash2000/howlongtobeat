@@ -233,10 +233,6 @@ func (c *Client) searchHTTPRequest(ctx context.Context, body []byte, endpoint, t
 // SearchModifier can be used to filter the results by either excluding or including games and DLCs.
 // SearchOptions.Pagination is optional, but recommended. The default page size is 20.
 func (c *Client) Search(ctx context.Context, searchTerm string, searchModifier SearchModifier, options *SearchOptions) (*SearchGame, error) {
-	if searchTerm == "" {
-		return nil, errors.New("search term cannot be empty")
-	}
-
 	if options == nil {
 		options = &SearchOptions{
 			Pagination: nil,
