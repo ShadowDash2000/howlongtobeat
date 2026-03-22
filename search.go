@@ -248,3 +248,40 @@ func (c *Client) Search(ctx context.Context, searchTerm string, searchModifier S
 
 	return &resp, nil
 }
+
+// SearchAll searches for games on HowLongToBeat.
+// SearchModifier can be used to filter the results by either excluding or including games and DLCs.
+// SearchOptions.Pagination is optional, but recommended. The default page size is 20.
+func (c *Client) SearchAll(ctx context.Context, searchModifier SearchModifier, options *SearchOptions) (*SearchGame, error) {
+	if options == nil {
+		options = &SearchOptions{
+			Pagination: nil,
+			Search:     true,
+		}
+	}
+
+	apiData, err := c.getApiData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	requestBody := c.prepSearchRequest("", searchModifier, options.Pagination)
+
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := c.searchHTTPRequest(ctx, body, apiData.endpointPath, apiData.token)
+	if err != nil {
+		return nil, fmt.Errorf("create search request: %w", err)
+	}
+
+	var resp SearchGame
+
+	if err = c.doWithRateLimit(req, c.jsonParser(&resp)); err != nil {
+		return nil, fmt.Errorf("search: %w", err)
+	}
+
+	return &resp, nil
+}

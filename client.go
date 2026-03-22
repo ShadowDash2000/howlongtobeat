@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 type (
@@ -16,6 +18,8 @@ type (
 		client  *http.Client
 		logger  *log.Logger
 		apiData *ApiData
+
+		limiter *rate.Limiter
 	}
 
 	// ApiData contains the data needed to make requests to the HLTB API.
@@ -48,6 +52,16 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	}
 }
 
+func WithRateLimit(r time.Duration, b int) Option {
+	return func(client *Client) {
+		if r <= 0 || b <= 0 {
+			client.limiter = nil
+			return
+		}
+		client.limiter = rate.NewLimiter(rate.Every(r), b)
+	}
+}
+
 // New creates a new HowLongToBeat client for optimized HTTP requests.
 func New(options ...Option) (*Client, error) {
 	c := &Client{
@@ -71,6 +85,14 @@ func New(options ...Option) (*Client, error) {
 	return c, nil
 }
 
+func (c *Client) waitRateLimit(ctx context.Context) error {
+	if c.limiter == nil {
+		return nil
+	}
+
+	return c.limiter.Wait(ctx)
+}
+
 // do performs the given request and parses the response with the provided parser.
 func (c *Client) do(req *http.Request, parser parseResponseFunc) (err error) {
 	resp, err := c.client.Do(req)
@@ -87,6 +109,15 @@ func (c *Client) do(req *http.Request, parser parseResponseFunc) (err error) {
 	default:
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
+}
+
+func (c *Client) doWithRateLimit(req *http.Request, parser parseResponseFunc) (err error) {
+	err = c.waitRateLimit(req.Context())
+	if err != nil {
+		return err
+	}
+
+	return c.do(req, parser)
 }
 
 // request creates a new HTTP request with the default headers and context.
