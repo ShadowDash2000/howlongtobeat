@@ -1,29 +1,3 @@
-/*
- * BSD 3-Clause License
- *
- * Copyright (c) 2023. Edgar Schmidt
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
- * following conditions are met:
- *
- * Redistributions of source code must retain the above copyright notice, this list of conditions and the following
- * disclaimer.
- *
- * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following
- * disclaimer in the documentation and/or other materials provided with the distribution.
- *
- * Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products
- * derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 package howlongtobeat
 
 import (
@@ -34,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func Test_normalizePaginationValue(t *testing.T) {
@@ -99,7 +74,7 @@ func TestSearchModifierString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.sm.String(); got != tt.want {
+			if got := tt.sm; got != tt.want {
 				t.Errorf("SearchModifier.String() = %v, want %v", got, tt.want)
 			}
 		})
@@ -212,7 +187,7 @@ func Test_searchHTTPRequest(t *testing.T) {
 
 	for header, value := range headers {
 		if req.Header.Get(header) != value {
-			errs = errors.Join(errs, errors.New(fmt.Sprintf("detailHTTPRequest() did not set the correct %s header: want: %s, received: %s", header, value, req.Header.Get(header))))
+			errs = errors.Join(errs, fmt.Errorf("detailHTTPRequest() did not set the correct %s header: want: %s, received: %s", header, value, req.Header.Get(header)))
 		}
 	}
 
@@ -222,12 +197,15 @@ func Test_searchHTTPRequest(t *testing.T) {
 }
 
 func Test_Search(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	mockClient, err := New()
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
 
-	result, err := mockClient.Search(context.TODO(), "The Witcher 3 Wild Hunt", SearchModifierNone, nil)
+	result, err := mockClient.Search(ctx, "The Witcher 3 Wild Hunt", SearchModifierNone, nil)
 	if err != nil {
 		t.Fatalf("Search() error = %v", err)
 	}
@@ -238,10 +216,17 @@ func Test_Search(t *testing.T) {
 }
 
 func Test_Search_NullSearchTerm(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	mockClient := &Client{}
 
-	_, err := mockClient.Search(context.TODO(), "", SearchModifierNone, nil)
-	if strings.Compare(err.Error(), "search term cannot be empty") != 0 {
-		t.Fatalf(`Search() expected "search term cannot be empty" error, but received: %v`, err)
+	_, err := mockClient.Search(ctx, "", SearchModifierNone, nil)
+	if err == nil {
+		t.Fatalf("Search() expected error, but received: %v", err)
+	}
+
+	if !errors.Is(err, EmptySearchTermErr) {
+		t.Fatalf(`Search() expected %v" error, but received: %v`, EmptySearchTermErr, err)
 	}
 }
