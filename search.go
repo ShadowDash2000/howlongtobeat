@@ -168,6 +168,8 @@ func (c *Client) prepSearchRequest(searchTerm string, searchModifier SearchModif
 			},
 		},
 		SearchType: "games",
+		HpKey:      authData.HpKey,
+		HpVal:      authData.HpVal,
 	}
 
 	requestBody.SearchTerms = strings.Split(searchTerm, " ")
