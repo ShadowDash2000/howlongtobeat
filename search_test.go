@@ -170,7 +170,7 @@ func Test_searchHTTPRequest(t *testing.T) {
 		mockClient = &Client{}
 	)
 
-	req, err := mockClient.searchHTTPRequest(context.Background(), body, "", "")
+	req, err := mockClient.searchHTTPRequest(context.Background(), body, "", TokenResponse{})
 	if err != nil {
 		t.Errorf("searchHTTPRequest() error = %v", err)
 	}

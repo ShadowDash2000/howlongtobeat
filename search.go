@@ -170,7 +170,7 @@ func (c *Client) normalizePaginationValue(value, defaultVal int) int {
 	return value
 }
 
-func (c *Client) searchHTTPRequest(ctx context.Context, body []byte, endpoint, token string) (*http.Request, error) {
+func (c *Client) searchHTTPRequest(ctx context.Context, body []byte, endpoint string, authData TokenResponse) (*http.Request, error) {
 	req, err := c.request(ctx, http.MethodPost, hltbBaseURL+"/"+endpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
@@ -186,7 +186,9 @@ func (c *Client) searchHTTPRequest(ctx context.Context, body []byte, endpoint, t
 	req.Header.Set(http.CanonicalHeaderKey("Sec-Fetch-Mode"), "cors")
 	req.Header.Set(http.CanonicalHeaderKey("Sec-Fetch-Dest"), "empty")
 	req.Header.Set(http.CanonicalHeaderKey("Dnt"), "1")
-	req.Header.Set(http.CanonicalHeaderKey("x-auth-token"), token)
+	req.Header.Set(http.CanonicalHeaderKey("x-auth-token"), authData.Token)
+	req.Header.Set(http.CanonicalHeaderKey("x-hp-key"), authData.HpKey)
+	req.Header.Set(http.CanonicalHeaderKey("x-hp-val"), authData.HpVal)
 
 	return req, nil
 }
@@ -219,7 +221,7 @@ func (c *Client) Search(ctx context.Context, searchTerm string, searchModifier S
 		return nil, err
 	}
 
-	req, err := c.searchHTTPRequest(ctx, body, apiData.endpointPath, apiData.token)
+	req, err := c.searchHTTPRequest(ctx, body, apiData.endpointPath, apiData.authData)
 	if err != nil {
 		return nil, fmt.Errorf("create search request: %w", err)
 	}
@@ -272,7 +274,7 @@ func (c *Client) SearchAll(ctx context.Context, searchModifier SearchModifier, o
 		return nil, err
 	}
 
-	req, err := c.searchHTTPRequest(ctx, body, apiData.endpointPath, apiData.token)
+	req, err := c.searchHTTPRequest(ctx, body, apiData.endpointPath, apiData.authData)
 	if err != nil {
 		return nil, fmt.Errorf("create search request: %w", err)
 	}

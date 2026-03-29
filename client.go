@@ -24,7 +24,7 @@ type (
 
 	// ApiData contains the data needed to make requests to the HLTB API.
 	ApiData struct {
-		token        string
+		authData     TokenResponse
 		scriptPaths  []string
 		endpointPath string
 	}

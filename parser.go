@@ -61,6 +61,8 @@ func (c *Client) scriptParser(apiData *ApiData) parseResponseFunc {
 
 type TokenResponse struct {
 	Token string `json:"token"`
+	HpKey string `json:"hpKey"`
+	HpVal string `json:"hpVal"`
 }
 
 func (c *Client) tokenParser(apiData *ApiData) parseResponseFunc {
@@ -70,7 +72,7 @@ func (c *Client) tokenParser(apiData *ApiData) parseResponseFunc {
 			return err
 		}
 
-		apiData.token = tokenResponse.Token
+		apiData.authData = tokenResponse
 
 		return nil
 	}
