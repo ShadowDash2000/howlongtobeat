@@ -75,6 +75,7 @@ func TestNewWithOptions(t *testing.T) {
 	mockClient, err := New(
 		WithHTTPClient(customHTTPClient),
 		WithRequestTimeout(10),
+		WithTokenTTL(5*time.Minute),
 	)
 	if err != nil {
 		t.Fatalf("New() returned error: %v", err)
@@ -86,6 +87,10 @@ func TestNewWithOptions(t *testing.T) {
 
 	if mockClient.client != customHTTPClient {
 		t.Fatalf("WithHTTPClient() did not set the custom HTTP client")
+	}
+
+	if mockClient.tokenTTL != 5*time.Minute {
+		t.Fatalf("WithTokenTTL() did not set the custom token TTL")
 	}
 }
 

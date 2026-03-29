@@ -13,4 +13,6 @@ const (
 	hltbGameURL = "https://howlongtobeat.com/game"
 	// defaultRequestTimeout is the default timeout for outgoing requests, we wait up to 30 seconds.
 	defaultRequestTimeout = 30 * time.Second
+	// defaultTokenTTL is the default time to live for the token.
+	defaultTokenTTL = 1 * time.Minute
 )

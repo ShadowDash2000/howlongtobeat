@@ -15,9 +15,10 @@ import (
 
 type (
 	Client struct {
-		client  *http.Client
-		logger  *log.Logger
-		apiData *ApiData
+		client   *http.Client
+		logger   *log.Logger
+		apiData  *ApiData
+		tokenTTL time.Duration
 
 		limiter *rate.Limiter
 	}
@@ -27,6 +28,7 @@ type (
 		authData     TokenResponse
 		scriptPaths  []string
 		endpointPath string
+		fetchedAt    time.Time
 	}
 
 	// Option is a type alias for functions to configure your Client.
@@ -49,6 +51,14 @@ func WithRequestTimeout(timeout int) Option {
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(client *Client) {
 		client.client = httpClient
+	}
+}
+
+// WithTokenTTL sets the time to live for the token.
+// If ttl duration is set to 0, the token will be fetched for every request.
+func WithTokenTTL(ttl time.Duration) Option {
+	return func(client *Client) {
+		client.tokenTTL = ttl
 	}
 }
 
@@ -75,6 +85,7 @@ func New(options ...Option) (*Client, error) {
 			},
 			Timeout: defaultRequestTimeout,
 		},
+		tokenTTL: defaultTokenTTL,
 	}
 
 	// Apply options
@@ -135,7 +146,7 @@ func (c *Client) request(ctx context.Context, method, url string, body io.Reader
 }
 
 func (c *Client) getApiData(ctx context.Context) (*ApiData, error) {
-	if c.apiData != nil {
+	if c.apiData != nil && time.Since(c.apiData.fetchedAt) < c.tokenTTL {
 		return c.apiData, nil
 	}
 
@@ -152,7 +163,9 @@ func (c *Client) getApiData(ctx context.Context) (*ApiData, error) {
 // getApiDataWithDefaultEndpoint
 // Method parses the request token and sets the default endpointPath.
 func (c *Client) getApiDataWithDefaultEndpoint(ctx context.Context) (*ApiData, error) {
-	apiData := &ApiData{}
+	apiData := &ApiData{
+		fetchedAt: time.Now(),
+	}
 
 	req, err := c.tokenHTTPRequest(ctx)
 	if err != nil {
@@ -172,7 +185,9 @@ func (c *Client) getApiDataWithDefaultEndpoint(ctx context.Context) (*ApiData, e
 // Method parses the request token and tries to search js scripts and then
 // find the endpointPath in one of these scripts.
 func (c *Client) getApiDataWithEndpointSearch(ctx context.Context) (*ApiData, error) {
-	apiData := &ApiData{}
+	apiData := &ApiData{
+		fetchedAt: time.Now(),
+	}
 
 	req, err := c.tokenHTTPRequest(ctx)
 	if err != nil {
