@@ -112,6 +112,9 @@ type (
 		SearchPage    int                  `json:"searchPage"`
 		Size          int                  `json:"size"`
 		SearchOptions searchRequestOptions `json:"searchOptions"`
+
+		HpKey string `json:"-"`
+		HpVal string `json:"-"`
 	}
 
 	SearchOptions struct {
@@ -122,6 +125,26 @@ type (
 
 type SearchModifier = string
 
+func (sr searchRequest) MarshalJSON() ([]byte, error) {
+	type alias searchRequest
+
+	baseBytes, err := json.Marshal(alias(sr))
+	if err != nil {
+		return nil, err
+	}
+
+	var obj map[string]any
+	if err := json.Unmarshal(baseBytes, &obj); err != nil {
+		return nil, err
+	}
+
+	if sr.HpKey != "" {
+		obj[sr.HpKey] = sr.HpVal
+	}
+
+	return json.Marshal(obj)
+}
+
 const (
 	SearchModifierNone    SearchModifier = ""
 	SearchModifierOnlyDLC SearchModifier = "only_dlc"
@@ -130,7 +153,7 @@ const (
 
 var EmptySearchTermErr = errors.New("search term cannot be empty")
 
-func (c *Client) prepSearchRequest(searchTerm string, searchModifier SearchModifier, pagination *SearchGamePagination) *searchRequest {
+func (c *Client) prepSearchRequest(searchTerm string, searchModifier SearchModifier, pagination *SearchGamePagination, authData TokenResponse) *searchRequest {
 	requestBody := &searchRequest{
 		SearchOptions: searchRequestOptions{
 			Games: searchRequestOptionsGames{
@@ -214,7 +237,7 @@ func (c *Client) Search(ctx context.Context, searchTerm string, searchModifier S
 		return nil, err
 	}
 
-	requestBody := c.prepSearchRequest(searchTerm, searchModifier, options.Pagination)
+	requestBody := c.prepSearchRequest(searchTerm, searchModifier, options.Pagination, apiData.authData)
 
 	body, err := json.Marshal(requestBody)
 	if err != nil {
@@ -267,7 +290,7 @@ func (c *Client) SearchAll(ctx context.Context, searchModifier SearchModifier, o
 		return nil, err
 	}
 
-	requestBody := c.prepSearchRequest("", searchModifier, options.Pagination)
+	requestBody := c.prepSearchRequest("", searchModifier, options.Pagination, apiData.authData)
 
 	body, err := json.Marshal(requestBody)
 	if err != nil {
